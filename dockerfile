@@ -8,4 +8,5 @@ COPY update_html.sh /usr/local/apache2/htdocs/update_html.sh
 RUN chmod +x /usr/local/apache2/htdocs/update_html.sh && \
     /usr/local/apache2/htdocs/update_html.sh
 
-EXPOSE 80
+# Set the container to run Apache in the foreground
+CMD ["httpd", "-D", "FOREGROUND"]
