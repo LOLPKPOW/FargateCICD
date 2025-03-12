@@ -27,3 +27,8 @@ variable "subnet_id5" {
   description = "Subnet ID for NAT Gateway"
   type        = string
 }
+
+variable "docker_image" {
+  description = "URL for Docker Image"
+  type = string
+}

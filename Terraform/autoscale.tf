@@ -1,8 +1,8 @@
-# Define the ECS Auto-Scaling Target
+# Define the ECS Auto-Scaling Target (Sets the cluster and service to scale)
 resource "aws_appautoscaling_target" "ecs_service_target" {
   max_capacity       = 10  # Maximum number of tasks
   min_capacity       = 1   # Minimum number of tasks
-  resource_id        = "service/${aws_ecs_cluster.apache_cluster.name}/${aws_ecs_service.apache_service.name}"
+  resource_id        = "service/${aws_ecs_cluster.apache_cluster.name}/${aws_ecs_service.apache_service.name}" # Uses the name of the cluster and service created in template
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
 }
@@ -20,7 +20,7 @@ resource "aws_appautoscaling_policy" "ecs_service_scale_up" {
     predefined_metric_specification {
       predefined_metric_type = "ECSServiceAverageCPUUtilization"
     }
-    scale_in_cooldown  = 60
+    scale_in_cooldown  = 60 # Time before scaling in/out
     scale_out_cooldown = 60
   }
 
@@ -44,5 +44,5 @@ resource "aws_appautoscaling_policy" "ecs_service_scale_down" {
     scale_out_cooldown = 60
   }
 
-  depends_on = [aws_appautoscaling_target.ecs_service_target]  # Ensure the target is created before the policy
+  depends_on = [aws_appautoscaling_target.ecs_service_target]  # Makes sure that targets are created before creating auto scaling policy
 }

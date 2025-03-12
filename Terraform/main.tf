@@ -143,6 +143,7 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   })
 }
 
+# Attach ECS Task Execution Role
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   role       = aws_iam_role.ecs_task_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
@@ -199,7 +200,7 @@ resource "aws_lb" "apache_alb" {
   subnets            = [aws_subnet.public_subnet1.id, aws_subnet.public_subnet2.id]
 }
 
-# Target Group for ALB
+# Target Group for ALB to forward traffic on port 80
 resource "aws_lb_target_group" "apache_target_group" {
   name     = "apache-target-group"
   port     = 80
@@ -226,14 +227,15 @@ resource "aws_lb_listener" "http" {
 resource "aws_ecs_task_definition" "apache_task" {
   family                   = "apache-task"
   network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
+  requires_compatibilities = ["FARGATE"] # Use Fargate
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
   cpu                      = "512"
   memory                   = "1024"
 
+  # Exposed port 80 for the container
   container_definitions = jsonencode([{
     name      = "apache-container"
-    image     = "975050212504.dkr.ecr.us-east-2.amazonaws.com/containers/pwoodproject:latest"
+    image     = var.docker_image
     cpu       = 512
     memory    = 1024
     essential = true
@@ -254,6 +256,7 @@ resource "aws_ecs_service" "apache_service" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  # Specify which subnets can hold the containers
   network_configuration {
     subnets          = [
       aws_subnet.container_subnet_1.id,
@@ -264,11 +267,12 @@ resource "aws_ecs_service" "apache_service" {
     assign_public_ip = false
   }
 
+  # Target Group for the Load Balancer
   load_balancer {
     target_group_arn = aws_lb_target_group.apache_target_group.arn
     container_name   = "apache-container"
     container_port   = 80
   }
 
-  depends_on = [aws_lb.apache_alb, aws_lb_target_group.apache_target_group, aws_lb_listener.http]
+  depends_on = [aws_lb.apache_alb, aws_lb_target_group.apache_target_group, aws_lb_listener.http] # Don't create until specified resources complete
 }

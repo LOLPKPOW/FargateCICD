@@ -1,0 +1,19 @@
+# terraform.tfvars.example
+# 
+# This file is a template. Rename it to "terraform.tfvars" and update the variables
+# with your own values to configure the Terraform resources.
+
+# Specify VPC subnet
+vpc_id = "xxxxxxxx/xx"
+
+# Subnet_id1-3 for container subnets
+subnet_id1 = "xxxxxxxx/xx"
+subnet_id2 = "xxxxxxxx/xx"
+subnet_id3 = "xxxxxxxx/xx"
+
+# Subnet_id4 for NAT Gateway and ALB
+subnet_id4 = "xxxxxxxx/xx"
+subnet_id5 = "xxxxxxxx/xx"
+
+# Docker Image in ECR
+docker_image = "xxxxxxx.dkr.ecr.us-east-2.amazonaws.com/xxxxxx/xxxxxx:latest"
