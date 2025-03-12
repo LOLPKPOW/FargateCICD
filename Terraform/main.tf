@@ -197,7 +197,8 @@ resource "aws_lb" "apache_alb" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = [aws_subnet.public_subnet1.id, aws_subnet.public_subnet2.id, aws_subnet.public_subnet3.id]
+  subnets            = [aws_subnet.public_subnet1.id, aws_subnet.public_subnet2.id]
+  enable_cross_zone_load_balancing = true
 }
 
 # Target Group for ALB to forward traffic on port 80
