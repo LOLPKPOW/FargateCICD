@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main  # Runs when code is pushed to main
+    paths:
+      - 'Container Application/**'
 
 jobs:
   deploy:
