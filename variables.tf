@@ -4,6 +4,26 @@ variable "vpc_id" {
 }
 
 variable "subnet_id" {
-  description = "Subnet ID for Fargate"
+  description = "Subnet ID for Fargate Containers"
+  type        = string
+}
+
+variable "subnet_id2" {
+  description = "Subnet ID 2 for Fargate Containers"
+  type        = string
+}
+
+variable "subnet_id3" {
+  description = "Subnet ID 3 for Fargate Containers"
+  type        = string
+}
+
+variable "subnet_id4" {
+  description = "Subnet ID for NAT Gateway"
+  type        = string
+}
+
+variable "subnet_id5" {
+  description = "Subnet ID 3 for Fargate Containers"
   type        = string
 }

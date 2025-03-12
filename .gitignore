@@ -2,6 +2,10 @@
 terraform.tfvars
 *.tfstate
 *.tfstate.backup
+.terraform.lock.hcl
+.terraform.tfstate.lock.info
+.terraform/
+terraform.tfstate*
 
 # Ignore AWS Credentials
 .aws
