@@ -16,7 +16,7 @@ resource "aws_appautoscaling_policy" "ecs_service_scale_up" {
   service_namespace     = "ecs"
 
   target_tracking_scaling_policy_configuration {
-    target_value       = 50  # Target CPU usage percentage for scaling out
+    target_value       = 60  # Target CPU usage percentage for scaling out
     predefined_metric_specification {
       predefined_metric_type = "ECSServiceAverageCPUUtilization"
     }

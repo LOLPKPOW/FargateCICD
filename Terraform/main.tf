@@ -2,74 +2,122 @@ provider "aws" {
   region = "us-east-2"
 }
 
-# Elastic IP for NAT Gateway
-resource "aws_eip" "my_nat_eip" {}
-
-resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_ecr_policy" {
-  role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+# Create a new VPC
+resource "aws_vpc" "new_vpc" {
+  cidr_block = var.vpc_id
+  enable_dns_support = true
+  enable_dns_hostnames = true
+  tags = {
+    Name = "new-vpc"
+  }
 }
 
-# Reference existing public subnet
-data "aws_subnet" "existing_public_subnet" {
-  id = var.subnet_id  # The subnet ID passed as a variable
+# Create subnets for ECS containers (private subnets)
+resource "aws_subnet" "container_subnet_1" {
+  vpc_id            = aws_vpc.new_vpc.id
+  cidr_block        = var.subnet_id1
+  availability_zone = "us-east-2a"
+  map_public_ip_on_launch = false
+  tags = {
+    Name = "container-subnet-1"
+  }
 }
 
-# Create a new subnet for NAT Gateway
-resource "aws_subnet" "nat_gateway_subnet" {
-  vpc_id            = var.vpc_id
-  cidr_block        = "172.31.49.0/24"  # New CIDR block for the NAT Gateway
+resource "aws_subnet" "container_subnet_2" {
+  vpc_id            = aws_vpc.new_vpc.id
+  cidr_block        = var.subnet_id2
+  availability_zone = "us-east-2b"
+  map_public_ip_on_launch = false
+  tags = {
+    Name = "container-subnet-2"
+  }
+}
+
+resource "aws_subnet" "container_subnet_3" {
+  vpc_id            = aws_vpc.new_vpc.id
+  cidr_block        = var.subnet_id3
+  availability_zone = "us-east-2c"
+  map_public_ip_on_launch = false
+  tags = {
+    Name = "container-subnet-3"
+  }
+}
+
+# Create 2 public subnets for NAT Gateway and ALB
+resource "aws_subnet" "public_subnet1" {
+  vpc_id            = aws_vpc.new_vpc.id
+  cidr_block        = var.subnet_id4
   availability_zone = "us-east-2a"
   map_public_ip_on_launch = true
   tags = {
-    Name = "nat-gateway-subnet"
+    Name = "public-subnet-1"
   }
 }
 
-# Create NAT Gateway in the new subnet
+resource "aws_subnet" "public_subnet2" {
+  vpc_id            = aws_vpc.new_vpc.id
+  cidr_block        = var.subnet_id5
+  availability_zone = "us-east-2b"
+  map_public_ip_on_launch = true
+  tags = {
+    Name = "public-subnet-2"
+  }
+}
+
+# Elastic IP for NAT Gateway
+resource "aws_eip" "my_nat_eip" {}
+
+# Create a NAT Gateway in the public subnet
 resource "aws_nat_gateway" "my_nat_gateway" {
   allocation_id = aws_eip.my_nat_eip.id
-  subnet_id     = aws_subnet.nat_gateway_subnet.id  # Place NAT Gateway in the new subnet
+  subnet_id     = aws_subnet.public_subnet1.id
 }
 
-# Reference the Internet Gateway (IG)
-data "aws_internet_gateway" "default_ig" {
-  filter {
-    name = "attachment.vpc-id"
-    values = [var.vpc_id]
-  }
+# Create the Internet Gateway
+resource "aws_internet_gateway" "my_igw" {
+  vpc_id = aws_vpc.new_vpc.id
 }
 
-# Attach the Internet Gateway to the NAT Gateway subnet (for outbound traffic)
-resource "aws_route_table" "nat_gateway_route_table" {
-  vpc_id = var.vpc_id
+# Route table for the public subnet to route traffic through the Internet Gateway
+resource "aws_route_table" "public_route_table" {
+  vpc_id = aws_vpc.new_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = data.aws_internet_gateway.default_ig.id  # Route outbound traffic through the IG
+    gateway_id = aws_internet_gateway.my_igw.id
   }
 }
 
-# Associate the route table with the NAT Gateway subnet
-resource "aws_route_table_association" "nat_gateway_association" {
-  subnet_id      = aws_subnet.nat_gateway_subnet.id
-  route_table_id = aws_route_table.nat_gateway_route_table.id
+# Associate the public subnet with the route table
+resource "aws_route_table_association" "public_route_table_association" {
+  subnet_id      = aws_subnet.public_subnet1.id
+  route_table_id = aws_route_table.public_route_table.id
 }
 
-# Private Subnet Route Table for NAT Gateway access
-resource "aws_route_table" "private_route_table" {
-  vpc_id = var.vpc_id
+# Route table for the container subnets to route traffic through the NAT Gateway
+resource "aws_route_table" "container_route_table" {
+  vpc_id = aws_vpc.new_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.my_nat_gateway.id  # Route outbound traffic through NAT Gateway
+    gateway_id = aws_nat_gateway.my_nat_gateway.id
   }
 }
 
-# Associate the route table with the private subnet (to route traffic through NAT Gateway)
-resource "aws_route_table_association" "private_subnet_association" {
-  subnet_id      = var.subnet_id  # The private subnet where the ECS tasks run
-  route_table_id = aws_route_table.private_route_table.id
+# Associate the container subnets with the NAT Gateway route table
+resource "aws_route_table_association" "container_subnet_1_association" {
+  subnet_id      = aws_subnet.container_subnet_1.id
+  route_table_id = aws_route_table.container_route_table.id
+}
+
+resource "aws_route_table_association" "container_subnet_2_association" {
+  subnet_id      = aws_subnet.container_subnet_2.id
+  route_table_id = aws_route_table.container_route_table.id
+}
+
+resource "aws_route_table_association" "container_subnet_3_association" {
+  subnet_id      = aws_subnet.container_subnet_3.id
+  route_table_id = aws_route_table.container_route_table.id
 }
 
 # ECS Cluster
@@ -100,39 +148,11 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# ECS Project Fargate Role
-resource "aws_iam_role" "ecs_project_fargate_role" {
-  name = "ECSProjectFargateRole"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action    = "sts:AssumeRole"
-        Effect    = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_project_fargate_role_policy" {
-  role       = aws_iam_role.ecs_project_fargate_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_project_fargate_policy_additional" {
-  role       = aws_iam_role.ecs_project_fargate_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-# Security Group for ECS Tasks
-resource "aws_security_group" "apache_sg" {
-  name        = "apache_sg"
-  description = "Allow HTTP traffic"
-  vpc_id      = var.vpc_id
+# ALB Security Group
+resource "aws_security_group" "alb_sg" {
+  name        = "alb_sg"
+  description = "Allow HTTP traffic to the ALB"
+  vpc_id      = aws_vpc.new_vpc.id
 
   ingress {
     from_port   = 80
@@ -149,11 +169,11 @@ resource "aws_security_group" "apache_sg" {
   }
 }
 
-# ALB Security Group
-resource "aws_security_group" "alb_sg" {
-  name        = "alb_sg"
-  description = "Allow HTTP traffic to the ALB"
-  vpc_id      = var.vpc_id
+# ECS Security Group for the containers
+resource "aws_security_group" "apache_sg" {
+  name        = "apache_sg"
+  description = "Allow HTTP traffic"
+  vpc_id      = aws_vpc.new_vpc.id
 
   ingress {
     from_port   = 80
@@ -176,7 +196,7 @@ resource "aws_lb" "apache_alb" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = [var.subnet_id4, var.subnet_id5]
+  subnets            = [aws_subnet.public_subnet1.id, aws_subnet.public_subnet2.id]
 }
 
 # Target Group for ALB
@@ -184,7 +204,7 @@ resource "aws_lb_target_group" "apache_target_group" {
   name     = "apache-target-group"
   port     = 80
   protocol = "HTTP"
-  vpc_id   = var.vpc_id
+  vpc_id   = aws_vpc.new_vpc.id
 
   target_type = "ip"
 }
@@ -200,6 +220,7 @@ resource "aws_lb_listener" "http" {
     target_group_arn = aws_lb_target_group.apache_target_group.arn
   }
 }
+
 
 # ECS Task Definition
 resource "aws_ecs_task_definition" "apache_task" {
@@ -234,7 +255,11 @@ resource "aws_ecs_service" "apache_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = [var.subnet_id, var.subnet_id2]
+    subnets          = [
+      aws_subnet.container_subnet_1.id,
+      aws_subnet.container_subnet_2.id,
+      aws_subnet.container_subnet_3.id
+    ]
     security_groups  = [aws_security_group.apache_sg.id]
     assign_public_ip = false
   }
