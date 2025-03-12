@@ -60,4 +60,5 @@ You should see the contents of the "index.template.html" file from the Container
 - Registers the new task definition revision with ECS.
 - Updates the ECS service with the new revision.
 
-The workflow is located in `.github/workflows/deploy.yml`, so if you wish to modify or extend it, you can do so there.
+The workflow is located in `.github/workflows/deploy.yml`, so if you wish to modify or extend it, you can do so there. The workflow only triggers when you modify files in the  
+"Container Application" directory. It will not trigger when modifying files in the Terraform directory, the .gitignore, or the README.md.
