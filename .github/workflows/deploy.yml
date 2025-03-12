@@ -28,7 +28,7 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build -t pwoodproject .
+          docker build -t pwoodproject ./Container\ Application
           docker tag pwoodproject:latest 975050212504.dkr.ecr.us-east-2.amazonaws.com/containers/pwoodproject:latest
 
       - name: Push Docker Image to ECR
