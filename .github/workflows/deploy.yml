@@ -3,7 +3,7 @@ name: Deploy to ECS Fargate
 on:
   push:
     branches:
-      - main  # Runs when code is pushed to main
+      - main
     paths:
       - 'Container Application/**'
 
@@ -35,6 +35,29 @@ jobs:
         run: |
           docker push 975050212504.dkr.ecr.us-east-2.amazonaws.com/containers/pwoodproject:latest
 
+      - name: Register New Task Definition
+        run: |
+          # Register new task definition revision with the latest Docker image
+          aws ecs register-task-definition \
+            --family apache-task \
+            --network-mode awsvpc \
+            --execution-role-arn arn:aws:iam::975050212504:role/ecsTaskExecutionRole \
+            --container-definitions "[{
+              \"name\": \"apache-container\",
+              \"image\": \"975050212504.dkr.ecr.us-east-2.amazonaws.com/containers/pwoodproject:latest\",
+              \"cpu\": 512,
+              \"memory\": 1024,
+              \"essential\": true,
+              \"portMappings\": [{
+                \"containerPort\": 80,
+                \"hostPort\": 80,
+                \"protocol\": \"tcp\"
+              }]
+            }]" \
+            --requires-compatibilities FARGATE \
+            --cpu "512" --memory "1024"
+
       - name: Update ECS Service
         run: |
-          aws ecs update-service --cluster ApacheCluster --service apache-service --force-new-deployment
+          # Update the ECS service with the new task definition revision
+          aws ecs update-service --cluster ApacheCluster --service apache-service --task-definition apache-task --force-new-deployment
