@@ -35,11 +35,13 @@ When you make these adjustments, save it without the .example at the end, so Ter
 This might be a good time to check out the .gitignore file. You can see that terraform.tfvars is included in that file, so Git will ignore it when pushing to your repository.  
 No need to worry that your information, such as your image repository URL, will be put onto GitHub.  
   
-Lets set up our GitHub Actions. If you choose your repository and click the "Actions" tab up top, you should see "Settings". Once you're there, you should see Secrets and Variables -> Actions.  
-That's where you can input your AWS Credentials, so GitHub Actions can modify your AWS resources. This repository expects the secrets to be AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, ECR_REPOSITORY, AWS_REGION, and AWS_ACCOUNT_ID.  
-The ECR_REPOSITORY is where your container lives in ECR. I.E. containers/apache-project:latest  
-The AWS_REGION is simply the region. I.E. us-east-2  
-The AWS_ACCOUNT_ID is just your account ID. I.E. 987654321789  
+Go to your GitHub repository, and under the "Settings" tab, click on "Secrets" in the left sidebar.
+Then, click the "New repository secret" button, and add the following secrets:
+- `AWS_ACCESS_KEY_ID`: Your AWS access key.
+- `AWS_SECRET_ACCESS_KEY`: Your AWS secret access key.
+- `ECR_REPOSITORY`: Your ECR repository name (e.g., `containers/apache-project`).
+- `AWS_REGION`: Your AWS region (e.g., `us-east-2`).
+- `AWS_ACCOUNT_ID`: Your AWS account ID (e.g., `987654321789`).
   
 If you didn't write them down, but set up your AWS CLI using them, you can find them at C:\Users\YourUserName\.aws\credentials  
 The workflow is contained within the .github/workflows/deploy.yml 
@@ -47,7 +49,15 @@ The workflow is contained within the .github/workflows/deploy.yml
 Next, you can go to where you copied the Terraform folder from my repository, and run `Terraform Plan`. This will show you the proposed infrastructure Terraform will create.  
 Assuming you receive no errors (hopefully!), you can run `Terraform Apply -auto-approve` to run the creation without requiring user intervention to approve.  
   
-Once it's complete, in the AWS Console you can go to Elastic Container Service -> ApacheCluster -> Find Services and click apache-service -> Click the Tasks tab -> You should see  
-your container provisioning/running. You can then go to EC2 -> Load Balancers -> apachealb -> and copy your DNS name from the information. It will look something like `apache-alb-814057752.us-east-2.elb.amazonaws.com`.  
+Once it's complete, in the AWS Console you can go to Elastic Container Service -> ApacheCluster -> Click the Tasks tab -> You should see your container provisioning/running. You can  
+then go to EC2 -> Load Balancers -> apachealb -> and copy your DNS name from the information. It will look something like `apache-alb-814057752.us-east-2.elb.amazonaws.com`.  
   
-You should see the contents of the "index.template.html" file from the Container Application directory. Now, you can just modify that as you'd like, push it to GitHub, and viola! Updated website!
+You should see the contents of the "index.template.html" file from the Container Application directory. Now, you can just modify that as you'd like, push it to GitHub, and viola! Updated website! You should also see a new revision within the apache-service of the ApacheCluster in ECS (Elastic Container Service).  
+  
+  When you push changes to the `main` branch, the GitHub Actions workflow (`deploy.yml`) will automatically run. This workflow performs the following:
+- Builds and tags your Docker image.
+- Pushes the image to Amazon ECR.
+- Registers the new task definition revision with ECS.
+- Updates the ECS service with the new revision.
+
+The workflow is located in `.github/workflows/deploy.yml`, so if you wish to modify or extend it, you can do so there.
