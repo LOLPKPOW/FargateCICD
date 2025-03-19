@@ -20,20 +20,20 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-2
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Log in to Amazon ECR
         run: |
-          aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 975050212504.dkr.ecr.us-east-2.amazonaws.com
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
       - name: Build Docker Image
         run: |
-          docker build -t pwoodproject ./Container\ Application
-          docker tag pwoodproject:latest 975050212504.dkr.ecr.us-east-2.amazonaws.com/containers/pwoodproject:latest
+          docker build -t apache-app ./Container\ Application
+          docker tag apache-app:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
 
       - name: Push Docker Image to ECR
         run: |
-          docker push 975050212504.dkr.ecr.us-east-2.amazonaws.com/containers/pwoodproject:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
 
       - name: Register New Task Definition
         run: |
@@ -41,10 +41,10 @@ jobs:
           aws ecs register-task-definition \
             --family apache-task \
             --network-mode awsvpc \
-            --execution-role-arn arn:aws:iam::975050212504:role/ecsTaskExecutionRole \
+            --execution-role-arn arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole \
             --container-definitions "[{
               \"name\": \"apache-container\",
-              \"image\": \"975050212504.dkr.ecr.us-east-2.amazonaws.com/containers/pwoodproject:latest\",
+              \"image\": \"${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest\",
               \"cpu\": 512,
               \"memory\": 1024,
               \"essential\": true,
