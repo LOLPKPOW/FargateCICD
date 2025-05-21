@@ -43,7 +43,7 @@ Then, click the "New repository secret" button, and add the following secrets:
 - `AWS_REGION`: Your AWS region (e.g., `us-east-2`).
 - `AWS_ACCOUNT_ID`: Your AWS account ID (e.g., `987654321789`).
   
-If you didn't write them down, but set up your AWS CLI using them, you can find them at C:\Users\YourUserName\.aws\credentials  
+If you didn't write them down, but set up your AWS CLI using them, you can find them at "C:\Users\YourUserName\.aws\credentials"
 The workflow is contained within the .github/workflows/deploy.yml 
   
 Next, you can go to where you copied the Terraform folder from my repository, and run `Terraform Plan`. This will show you the proposed infrastructure Terraform will create.  
